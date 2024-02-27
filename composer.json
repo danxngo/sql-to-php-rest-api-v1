@@ -1,0 +1,17 @@
+{
+    "name": "workstation/php-api",
+    "autoload": {
+        "psr-4": {
+            "Workstation\\PhpApi\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "TheNumbered",
+            "email": "2556833@students.wits.ac.za"
+        }
+    ],
+    "require": {
+        "firebase/php-jwt": "^6.10"
+    }
+}
