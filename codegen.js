@@ -36,7 +36,7 @@ function generateInterfaces(tables) {
     let output = '';
 
     tables.forEach(table => {
-        output += `interface ${table.name} {\n`;
+        output += `export interface ${table.name} {\n`;
         table.columns.forEach(column => {
             output += `    ${column.name}: ${mapMySQLTypeToTypeScript(column.type)};\n`;
         });
