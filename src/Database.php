@@ -51,13 +51,16 @@ class Database
             $values = ':' . implode(', :', array_keys($data));
             $sql = "INSERT INTO $table ($keys) VALUES ($values)";
             $stmt = $this->pdo->prepare($sql);
+
             foreach ($data as $key => $value) {
-                $stmt->bindValue(":$key", $value);
+                $sanitizedValue = filter_var($value, FILTER_SANITIZE_STRING);
+                $stmt->bindValue(":$key", $sanitizedValue);
             }
+
             return $stmt->execute();
         } catch (PDOException $e) {
             ErrorHandler::handleException($e);
-            return false; 
+            return false;
         }
     }
 
@@ -72,9 +75,12 @@ class Database
             $sql = "UPDATE $table SET $set WHERE id = :id";
             $stmt = $this->pdo->prepare($sql);
             $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+
             foreach ($data as $key => $value) {
-                $stmt->bindValue(":$key", $value);
+                $sanitizedValue = filter_var($value, FILTER_SANITIZE_STRING);
+                $stmt->bindValue(":$key", $sanitizedValue);
             }
+
             return $stmt->execute();
         } catch (PDOException $e) {
             ErrorHandler::handleException($e);
@@ -94,39 +100,43 @@ class Database
         }
     }
 
+    public function transaction(callable $callback): bool
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $callback($this);
+            $this->pdo->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            ErrorHandler::handleException($e);
+            return false;
+        }
+    }
+
     public function get(string $table, array $params = []): array
     {
         try {
             $sql = "SELECT * FROM $table";
+            $whereClause = '';
+            $bindings = [];
+
             if (!empty($params)) {
                 $conditions = [];
                 foreach ($params as $key => $value) {
                     $conditions[] = "$key = :$key";
+                    $bindings[":$key"] = $value;
                 }
-                $sql .= " WHERE " . implode(' AND ', $conditions);
+                $whereClause = " WHERE " . implode(' AND ', $conditions);
             }
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
+
+            $stmt = $this->pdo->prepare($sql . $whereClause);
+            $stmt->execute($bindings);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             ErrorHandler::handleException($e);
             return [];
         }
     }
+
 }
-
-
-/*
-// Example usage:
-$dsn = 'mysql:host=localhost;dbname=mydatabase;charset=utf8mb4';
-$username = 'username';
-$password = 'password';
-$options = [
-    PDO::ATTR_EMULATE_PREPARES => false,
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-];
-
-$database = new Database($dsn, $username, $password, $options);
-$users = $database->getAll("users");
-$user = $database->getById("users", 1);
-*/

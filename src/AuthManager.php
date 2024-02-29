@@ -7,6 +7,9 @@ use Firebase\JWT\Key;
 
 class AuthManager
 {
+    private const TOKEN_EXPIRATION = 3600; // Token expiration time in seconds
+    private const TOKEN_ALGORITHM = 'HS256'; // Token signing algorithm
+
     private string $secretKey;
     private Database $database;
 
@@ -16,32 +19,20 @@ class AuthManager
         $this->database = $database;
     }
 
-    public function generateToken(array $payload, int $expiration = 3600): string
+    public function generateToken(array $payload): string
     {
-        $payload['exp'] = time() + $expiration;
-        return JWT::encode($payload, $this->secretKey, 'HS256');
-    }
-
-    public function decodeToken(string $token): ?array
-    {
-        try {
-            $decoded = JWT::decode($token, new Key($this->secretKey, 'HS256'));
-            return (array) $decoded;
-        } catch (\Exception $e) {
-            return null;
-        }
+        $payload['exp'] = time() + self::TOKEN_EXPIRATION;
+        return JWT::encode($payload, $this->secretKey, self::TOKEN_ALGORITHM);
     }
 
     public function verifyToken(string $token): bool
     {
-        $decodedToken = $this->decodeToken($token);
-        if (!$decodedToken) {
+        try {
+            $decodedToken =  JWT::decode($token, new Key($this->secretKey, self::TOKEN_ALGORITHM));
+            return isset($decodedToken->exp) && $decodedToken->exp >= time();
+        } catch (\Exception $e) {
             return false;
         }
-        if (isset($decodedToken['exp']) && $decodedToken['exp'] < time()) {
-            return false;
-        }
-        return true;
     }
 
     public function login(string $email, string $password): ?string
@@ -56,7 +47,7 @@ class AuthManager
 
     public function signup(string $email, string $password, string $name): ?string
     {
-        if(!$this->database->get('user', ['email' => $email])) {
+        if (!$this->database->get('user', ['email' => $email])) {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             $user = ['email' => $email, 'password' => $hashedPassword, 'name' => $name];
             $this->database->insert('user', $user);
@@ -66,6 +57,7 @@ class AuthManager
 
     public function forgotPassword(string $email): bool
     {
+        // Implementation for password recovery logic
         return true;
     }
 }
