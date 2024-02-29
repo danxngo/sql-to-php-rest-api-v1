@@ -31,12 +31,16 @@ function parseMySQLDump(mysqlDump) {
     return tables;
 }
 
+function capitalizeFirstLetter(str) {
+    return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
 // Function to generate TypeScript interfaces
 function generateInterfaces(tables) {
     let output = '';
 
     tables.forEach(table => {
-        output += `export interface ${table.name} {\n`;
+        output += `export interface ${capitalizeFirstLetter(table.name)} {\n`;
         table.columns.forEach(column => {
             output += `    ${column.name}: ${mapMySQLTypeToTypeScript(column.type)};\n`;
         });
@@ -45,6 +49,7 @@ function generateInterfaces(tables) {
 
     return output;
 }
+
 
 // Function to map MySQL data types to TypeScript types
 function mapMySQLTypeToTypeScript(mysqlType) {
