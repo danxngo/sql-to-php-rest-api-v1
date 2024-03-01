@@ -44,7 +44,7 @@ $authManager = new AuthManager($firebaseSecretKey, $database);
 // Instantiate the router
 $router = new Router();
 
-$router->get('/login', function () use ($authManager) {
+$router->post('/login', function () use ($authManager) {
     $requestData = json_decode(file_get_contents('php://input'), true);
     if (!empty($requestData['email']) && !empty($requestData['password'])) {
         $email = filter_var($requestData['email'], FILTER_SANITIZE_EMAIL);
@@ -80,6 +80,23 @@ $router->post('/signup', function () use ($authManager) {
     } else {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid request data']);
+    }
+});
+
+$router->post('/logout', function () use ($authManager) {
+    $headers = getallheaders();
+    if (!isset($headers['Authorization'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authorization header is missing']);
+        exit();
+    }
+    $token = trim(str_replace('Bearer', '', $headers['Authorization']));
+    if ($authManager->logout($token)) {
+        echo json_encode(['message' => 'Logged out successfully']);
+    }
+    else{
+        http_response_code(401);
+        echo json_encode(['error'=> 'Invalid token']);
     }
 });
 

@@ -29,7 +29,13 @@ class AuthManager
     {
         try {
             $decodedToken =  JWT::decode($token, new Key($this->secretKey, self::TOKEN_ALGORITHM));
-            return isset($decodedToken->exp) && $decodedToken->exp >= time();
+            if ($decodedToken && isset($decodedToken->user_id)) {
+                $databaseUser = $this->database->get('user', ['id' => $decodedToken->user_id]);
+                if ($databaseUser && $databaseUser[0]['token'] === $token) {
+                    return isset($decodedToken->exp) && $decodedToken->exp >= time();
+                }
+            }
+            return false;
         } catch (\Exception $e) {
             return false;
         }
@@ -40,7 +46,9 @@ class AuthManager
         $user = $this->database->get('user', ['email' => $email]);
         if ($user && password_verify($password, $user[0]['password'])) {
             $tokenPayload = ['user_id' => $user[0]['id']];
-            return $this->generateToken($tokenPayload);
+            $token = $this->generateToken($tokenPayload);
+            $this->database->update('user', $user[0]['id'], ['token'=> $token]);
+            return $token;
         }
         return null;
     }
@@ -53,6 +61,16 @@ class AuthManager
             $this->database->insert('user', $user);
         }
         return $this->login($email, $password);
+    }
+
+    public function logout(string $token): bool
+    {
+        $decodedToken =  JWT::decode($token, new Key($this->secretKey, self::TOKEN_ALGORITHM));
+        if ($decodedToken && isset($decodedToken->user_id)) {
+            $user_id = $decodedToken->user_id;
+            return $this->database->update('user', $user_id, ['token'=> null]);
+        }
+        return false;
     }
 
     public function forgotPassword(string $email): bool
