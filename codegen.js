@@ -6,15 +6,17 @@ function readMySQLDump(filePath) {
     return fs.readFileSync(filePath, 'utf8');
 }
 
-// Function to parse the MySQL dump and extract table names and column definitions
+
+// Function to parse the MySQL dump and extract table names, column definitions, and nullability
 function parseMySQLDump(mysqlDump) {
     const tableRegex = /CREATE TABLE `(\w+)` \(([\s\S]+?)\)(?:,|;)/g;
-    const columnRegex = /`(\w+)` (\w+)(?:\((\d+)\))?[^,]*(?:,|$)/g;
+    const columnRegex = /`(\w+)` (\w+)(?:\((\d+)\))?([^,]*)(?:,|$)/g;
 
     const tables = [];
 
     let match;
     while ((match = tableRegex.exec(mysqlDump)) !== null) {
+
         const tableName = match[1];
         const columns = [];
 
@@ -22,7 +24,8 @@ function parseMySQLDump(mysqlDump) {
         while ((columnMatch = columnRegex.exec(match[2])) !== null) {
             const columnName = columnMatch[1];
             const columnType = columnMatch[2];
-            columns.push({ name: columnName, type: columnType });
+            const nullable = !columnMatch[4].includes('NOT NULL'); // Check if column is nullable
+            columns.push({ name: columnName, type: columnType, nullable });
         }
 
         tables.push({ name: tableName, columns });
@@ -31,18 +34,42 @@ function parseMySQLDump(mysqlDump) {
     return tables;
 }
 
+
+
 function capitalizeFirstLetter(str) {
     return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 }
 
-// Function to generate TypeScript interfaces
 function generateInterfaces(tables) {
     let output = '';
 
     tables.forEach(table => {
         output += `export interface ${capitalizeFirstLetter(table.name)} {\n`;
         table.columns.forEach(column => {
-            output += `    ${column.name}: ${mapMySQLTypeToTypeScript(column.type)};\n`;
+            const columnName = column.name;
+            const nullableSymbol = column.nullable ? '?' : '';
+            const columnType = mapMySQLTypeToTypeScript(column.type);
+            output += `    ${columnName}${nullableSymbol}: ${columnType};\n`;
+        });
+        output += `}\n\n`;
+    });
+
+    return output;
+}
+
+// Function to generate TypeScript input interfaces
+function generateInputInterfaces(tables) {
+    let output = '';
+
+    tables.forEach(table => {
+        output += `export interface ${capitalizeFirstLetter(table.name)}Input {\n`;
+        table.columns.forEach(column => {
+            if (column.name !== 'id') { // Exclude auto-incremented primary key from input interfaces
+                const columnName = column.name;
+                const nullableSymbol = column.nullable ? '?' : '';
+                const columnType = mapMySQLTypeToTypeScript(column.type);
+                output += `    ${columnName}${nullableSymbol}: ${columnType};\n`;
+            }
         });
         output += `}\n\n`;
     });
@@ -80,14 +107,13 @@ function generateTypeScriptInterfaces(mysqlDumpPath, outputPath) {
     const mysqlDump = readMySQLDump(mysqlDumpPath);
     const tables = parseMySQLDump(mysqlDump);
     const tsInterfaces = generateInterfaces(tables);
+    const tsInputInterfaces = generateInputInterfaces(tables);
 
-    // Ensure directory exists before writing the file
     ensureDirectoryExists(outputPath);
-
-    fs.writeFileSync(outputPath, tsInterfaces);
+    fs.writeFileSync(outputPath, tsInterfaces + tsInputInterfaces);
 }
 
 // Example usage
 const mysqlDumpPath = 'meta.sql';
-const outputPath = 'interfaces.ts';
+const outputPath = 'src/interfaces/index.ts';
 generateTypeScriptInterfaces(mysqlDumpPath, outputPath);
