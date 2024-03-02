@@ -31,7 +31,8 @@ class ErrorHandler
         echo json_encode([
             'error' => [
                 'code' => $statusCode,
-                'message' => 'An unexpected error occurred. Please try again later.',
+                //'message' => 'An unexpected error occurred. Please try again later.',
+                'message' => $exception->getMessage(),
             ]
         ]);
     }

@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 8.0.36, for Win64 (x86_64)
 --
--- Host: localhost    Database: apidb
+-- Host: localhost    Database: notey
 -- ------------------------------------------------------
 -- Server version	8.0.36
 
@@ -26,11 +26,11 @@ CREATE TABLE `note` (
   `id` int NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
   `body` text NOT NULL,
-  `user_id` int NOT NULL,
+  `user_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
-  CONSTRAINT `note_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `note_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -39,7 +39,7 @@ CREATE TABLE `note` (
 
 LOCK TABLES `note` WRITE;
 /*!40000 ALTER TABLE `note` DISABLE KEYS */;
-INSERT INTO `note` VALUES (1,'My first note','This is the body of my first note',1);
+INSERT INTO `note` VALUES (1,'Meeting Notes','Discussed project deadlines and milestones.',1),(2,'Grocery List','Milk, eggs, bread, and bananas.',2),(3,'To-Do List','1. Finish report\n2. Call client\n3. Email team',1),(4,'Recipe','Ingredients:\n- Chicken\n- Rice\n- Vegetables',3);
 /*!40000 ALTER TABLE `note` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -55,9 +55,8 @@ CREATE TABLE `user` (
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `token` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -66,7 +65,7 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
-INSERT INTO `user` VALUES (1,'john','john@example.com','password123'),(2,'john_doe','john@example.com','$2y$10$fN5jTtnKVBA7FpzEBEFEXOCfLXFecErhG8JJoszVS96hLGcVnXYz.'),(3,'john','john2@example.com','$2y$10$imQLsWEMW5vLh0AC8kn0Iumf8OmCETL.6lJ7ZODjPPgIWlQ03xRe6'),(4,'john','john2@example.com','$2y$10$Jnseg6Aw6OUpDbZgnERNxu.6TQhM9ifF5d7zCWRPcxp6XtWj4KA5.');
+INSERT INTO `user` VALUES (1,'John Doe','john@example.com','password123'),(2,'Jane Smith','jane@example.com','securepass'),(3,'Michael Johnson','michael@example.com','pass123');
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -79,4 +78,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-02-27 12:18:18
+-- Dump completed on 2024-02-29 19:09:04

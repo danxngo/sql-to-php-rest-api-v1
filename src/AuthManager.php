@@ -55,9 +55,10 @@ class AuthManager
 
     public function signup(string $email, string $password, string $name): ?string
     {
+
         if (!$this->database->get('user', ['email' => $email])) {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $user = ['email' => $email, 'password' => $hashedPassword, 'name' => $name];
+            $user = ['email' => $email, 'password' => $hashedPassword, 'name' => $name, 'token' => ''];
             $this->database->insert('user', $user);
         }
         return $this->login($email, $password);
@@ -68,7 +69,7 @@ class AuthManager
         $decodedToken =  JWT::decode($token, new Key($this->secretKey, self::TOKEN_ALGORITHM));
         if ($decodedToken && isset($decodedToken->user_id)) {
             $user_id = $decodedToken->user_id;
-            return $this->database->update('user', $user_id, ['token'=> null]);
+            return $this->database->update('user', $user_id, ['token'=> '']);
         }
         return false;
     }

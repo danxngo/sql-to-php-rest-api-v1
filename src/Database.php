@@ -2,6 +2,7 @@
 
 namespace Workstation\PhpApi;
 
+use InvalidArgumentException;
 use PDO;
 use PDOException;
 
@@ -22,7 +23,8 @@ class Database
     public function getAll(string $table): array
     {
         try {
-            $stmt = $this->pdo->query("SELECT * FROM $table");
+            $stmt = $this->pdo->prepare("SELECT * FROM $table");
+            $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             ErrorHandler::handleException($e);
@@ -34,7 +36,7 @@ class Database
     {
         try {
             $stmt = $this->pdo->prepare("SELECT * FROM $table WHERE id = :id");
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             return $result !== false ? $result : null;
@@ -48,17 +50,28 @@ class Database
     {
         try {
             $keys = implode(', ', array_keys($data));
-            $values = ':' . implode(', :', array_keys($data));
-            $sql = "INSERT INTO $table ($keys) VALUES ($values)";
+            $placeholders = implode(', ', array_map(function ($key) {
+                return ":$key"; }, array_keys($data)));
+
+            $sql = "INSERT INTO $table ($keys) VALUES ($placeholders)";
             $stmt = $this->pdo->prepare($sql);
 
             foreach ($data as $key => $value) {
-                $sanitizedValue = filter_var($value, FILTER_SANITIZE_STRING);
-                $stmt->bindValue(":$key", $sanitizedValue);
+                if (is_string($value)) {
+                    $stmt->bindValue(":$key", $value, PDO::PARAM_STR);
+                } else if (is_int($value)) {
+                    $stmt->bindValue(":$key", $value, PDO::PARAM_INT);
+                } else {
+                    // Handle other data types or throw an exception
+                    throw new InvalidArgumentException("Invalid data type for: $key");
+                }
             }
 
             return $stmt->execute();
         } catch (PDOException $e) {
+            ErrorHandler::handleException($e);
+            return false;
+        } catch (InvalidArgumentException $e) {
             ErrorHandler::handleException($e);
             return false;
         }
@@ -77,12 +90,20 @@ class Database
             $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
             foreach ($data as $key => $value) {
-                $sanitizedValue = filter_var($value, FILTER_SANITIZE_STRING);
-                $stmt->bindValue(":$key", $sanitizedValue);
+                if (is_string($value)) {
+                    $stmt->bindValue(":$key", $value, PDO::PARAM_STR);
+                } else if (is_int($value)) {
+                    $stmt->bindValue(":$key", $value, PDO::PARAM_INT);
+                } else {
+                    throw new InvalidArgumentException("Invalid data type for: $key");
+                }
             }
 
             return $stmt->execute();
         } catch (PDOException $e) {
+            ErrorHandler::handleException($e);
+            return false;
+        } catch (InvalidArgumentException $e) {
             ErrorHandler::handleException($e);
             return false;
         }
@@ -92,23 +113,9 @@ class Database
     {
         try {
             $stmt = $this->pdo->prepare("DELETE FROM $table WHERE id = :id");
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
             return $stmt->execute();
         } catch (PDOException $e) {
-            ErrorHandler::handleException($e);
-            return false;
-        }
-    }
-
-    public function transaction(callable $callback): bool
-    {
-        $this->pdo->beginTransaction();
-        try {
-            $callback($this);
-            $this->pdo->commit();
-            return true;
-        } catch (PDOException $e) {
-            $this->pdo->rollBack();
             ErrorHandler::handleException($e);
             return false;
         }
@@ -139,4 +146,17 @@ class Database
         }
     }
 
+    public function transaction(callable $callback): bool
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $callback($this);
+            $this->pdo->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            ErrorHandler::handleException($e);
+            return false;
+        }
+    }
 }

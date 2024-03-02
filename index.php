@@ -22,7 +22,15 @@ set_exception_handler([ErrorHandler::class, 'handleException']);
 
 // Set response content type and allow all origins
 header('Content-Type: application/json; charset=UTF-8');
-header('Access-Control-Allow-Origin: *');
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization"); 
+
+// Check if it's a preflight request
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 // Instantiate the database using environment variables
 $username = $_ENV['DB_USERNAME'];
@@ -68,7 +76,14 @@ $router->post('/signup', function () use ($authManager) {
     if (!empty($requestData['email']) && !empty($requestData['password']) && !empty($requestData['name'])) {
         $email = filter_var($requestData['email'], FILTER_SANITIZE_EMAIL);
         $password = $requestData['password'];
-        $name = filter_var($requestData['name'], FILTER_SANITIZE_STRING);
+        $name = $requestData['name'];
+
+        // Perform additional validation checks
+        if (strlen($password) < 6) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Password must be at least 6 characters long']);
+            return;
+        }
 
         $token = $authManager->signup($email, $password, $name);
         if ($token) {
@@ -100,6 +115,26 @@ $router->post('/logout', function () use ($authManager) {
     }
 });
 
+// Validate token
+$router->get('/validateToken', function () use ($authManager) {
+    $headers = getallheaders();
+    if (!isset($headers['Authorization'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authorization header is missing']);
+        exit();
+    }
+    $token = trim(str_replace('Bearer', '', $headers['Authorization']));
+    if ($authManager->verifyToken($token)) {
+        echo json_encode(['message' => 'Token is valid']);
+    }
+    else{
+        http_response_code(401);
+        echo json_encode(['error'=> 'Invalid token']);
+    }
+});
+
+
+
 defineRoutesForTables($router, $database, 'meta.sql');
 
 // Middleware function for token verification
@@ -121,5 +156,6 @@ $verifyTokenMiddleware = function () use ($authManager) {
 
 // Apply middleware to routes that require authentication
 $router->applyMiddleware('GET|POST|PUT|DELETE', '/user', $verifyTokenMiddleware);
+//$router->applyMiddleware('GET|POST|PUT|DELETE', '/note', $verifyTokenMiddleware);
 
 $router->run();
