@@ -30,6 +30,8 @@ This RESTful API is built using PHP and utilizes a MySQL database for data stora
 
 - `DELETE /user`: Deletes a user. Requires a valid JWT token in the `Authorization` header.
 
+### All Resources in meta.sql will have `GET, POST, PUT, and DELETE` resource
+
 ## Error Handling
 
 The API uses custom error and exception handlers to return JSON responses in case of errors. If an error occurs, the API will return a JSON object with an `error` field containing the error message.
