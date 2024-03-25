@@ -30,7 +30,17 @@ This RESTful API is built using PHP and utilizes a MySQL database for data stora
 
 - `DELETE /user`: Deletes a user. Requires a valid JWT token in the `Authorization` header.
 
--- ### All Resources in `meta.sql` will have `GET, POST, PUT, and DELETE` resource
+### Manipulatable
+```bash
+mysqldump -u [username] -p[password] [database_name] > meta.sql
+```
+All Resources in `meta.sql` will get `GET, POST, PUT, and DELETE` resource
+
+```bash
+node codegen.js
+```
+This will generate a file containing interfaces based on the `meta.sql`
+
 
 ## Error Handling
 
